@@ -1,2 +1,2 @@
-# pyol
+# pyopenlambda
 Python interface for OpenLambda
