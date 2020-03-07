@@ -154,3 +154,24 @@ class Config(BaseConfig):
         elif key == "server_mode":
             assert value in ["lambda", "sock"]
         self.__dict__[key] = value
+
+    def rebase_worker_dir(self, worker_dir):
+        # Change all path-related variables
+        self.worker_dir = worker_dir
+        self.registry = os.path.join(worker_dir, "registry")
+        self.Pkgs_dir = os.path.join(worker_dir, "lambda/packages")
+        self.SOCK_base_path = os.path.join(worker_dir, "lambda")
+
+
+class LambdaConfig(Config):
+    def __init__(self, worker_dir: str):
+        super(LambdaConfig, self).__init__(worker_dir)
+        # self.sandbox = "sock"
+        self.server_mode = "lambda"
+
+
+class SOCKConfig(Config):
+    def __init__(self, worker_dir: str):
+        super(SOCKConfig, self).__init__(worker_dir)
+        # self.sandbox = "sock"
+        self.server_mode = "sock"
