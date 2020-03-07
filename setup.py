@@ -4,10 +4,10 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="openlambda",
+    name="pyopenlambda",
     version="0.0.1",
     author="gindachen",
-    author_email="author@example.com",
+    author_email="homtazhan@gmail.com",
     description="A Python interface for OpenLambda",
     long_description=long_description,
     long_description_content_type="text/markdown",
