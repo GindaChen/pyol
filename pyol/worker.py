@@ -6,19 +6,24 @@ from pyol.config import Config, Path_t, Limits, Features, Trace, Storage
 
 class Worker(Config):
 
-    def __init__(self,
-                 # Config native parameter
-                 use_tmpfs=None,
-                 # _Config parameters
-                 worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
-                 server_mode: str = None,
-                 registry_cache_ms: int = None,
-                 pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
-                 sandbox_config: dict = None, docker_runtime: str = None,
-                 limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
+    def __init__(
+            self,
+            # Required arguments: worker_dir - to decide the directory to run.
+            worker_dir: Path_t,
+            # Config native parameter
+            use_tmpfs: bool = None,
+            # _Config parameters
+            worker_port: str = None, sandbox: str = None,
+            server_mode: str = None,
+            registry_cache_ms: int = None,
+            pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
+            sandbox_config: dict = None, docker_runtime: str = None,
+            limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
         """The work directory will be a separated entity that eventually injected into config."""
 
-        self.worker_dir = abspath(worker_dir) or abspath(os.getcwd())
+        # TODO: Inject the worker_dir to the setting of config.
+        worker_dir = abspath(worker_dir) or abspath(os.getcwd())
+        self.worker_dir = worker_dir
 
         super(Worker, self).__init__(
             use_tmpfs=use_tmpfs,
@@ -30,3 +35,12 @@ class Worker(Config):
             sandbox_config=sandbox_config, docker_runtime=docker_runtime,
             limits=limits, features=features, trace=trace, storage=storage)
 
+
+    def mount(self):
+        pass
+
+    def umount(self):
+        pass
+
+    def remount(self):
+        pass
