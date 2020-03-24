@@ -226,3 +226,6 @@ def timeit(func):
         return result
 
     return wrapper
+
+# By defualt set the logger at current directory.
+setup_logging(".")
