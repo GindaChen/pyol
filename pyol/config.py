@@ -1,177 +1,145 @@
 import os
-import json
+from os.path import abspath, join
 
 
-class BaseConfig():
-    def __init__(self):
-        # Freeze the type of the variable.
-        self.__frozen__ = None
-        self.__freeze__()
+class Options():
+    """Provide options to a variable."""
+    pass
 
-    def __freeze__(self):
-        self.__frozen__ = {}
-        for key, value in self.__dict__.items():
-            if key.startswith("_"):
-                continue
-            # TODO: Complex type shall be careful
-            self.__frozen__[key] = type(value)
 
-    def __check_one__(self, value, type_):
-        if type_ in [set]:
-            return value in type_
-        if isinstance(value, type_):
-            return True
-        return False
+class BaseConfig:
+    """Config that can load/dump a dict."""
 
-    def __check__(self):
-        result = True
-        for key, value in self.__dict__.items():
-            if key.startswith("_"):
-                continue
-            expect = self.__frozen__[key]
-            result = self.__check_one__(value, expect) and result
-        return result
+    def __str__(self):
+        return str(self.to_dict())
 
-    def __call__(self, *args, **kwargs):
-        self.__check__()
+    __repr__ = __str__
+
+    def to_dict(self):
         result = {}
-        for key, value in self.__dict__.items():
-            if key.startswith("_"):
-                continue
-            if isinstance(value, BaseConfig):
-                value = value(*args, **kwargs)
-            result[key] = value
+        for k, v in self.__dict__.items():
+            if isinstance(v, BaseConfig):
+                result[k] = v.to_dict()
+            else:
+                result[k] = v
         return result
 
-    def __repr__(self):
-        return self()
-
-    def tojson(self):
-        config = self()
-        return json.dumps(config, indent=2)
-
-
-class LimitsConfig(BaseConfig):
-    this_key = "limits"
-
-    def __init__(self):
-        # how many processes can be created within a Sandbox?
-        self.procs = 10
-
-        # how much memory can a regular lambda use?  The lambda can
-        # always set a lower limit for itself.
-        self.mem_mb = 50
-
-        # how aggresively will the mem of the Sandbox be swapped?
-        self.swappiness = 0
-
-        # how much memory do we use for an admin lambda that is used
-        # for pip installs?
-        self.installer_mem_mb = 500
-        super(LimitsConfig, self).__init__()
+    def from_dict(self, item):
+        for k, v in item.items():
+            if isinstance(self.__dict__[k], BaseConfig):
+                self.__dict__[k].from_dict(v)
+            else:
+                self.__dict__[k] = v
+        return self
 
 
-class FeaturesConfig(BaseConfig):
-    this_key = "features"
-
-    def __init__(self):
-        self.reuse_cgroups = False
-        self.import_cache = True
-        self.downsize_paused_mem = True
-        super(FeaturesConfig, self).__init__()
+class SandBox(Options):
+    lambda_ = "lambda"
+    sock = "sock"
 
 
-class TraceConfig(BaseConfig):
-    this_key = "trace"
-
-    def __init__(self):
-        self.cgroups = False
-        self.memory = False
-        self.evictor = False
-        self.package = False
-        super(TraceConfig, self).__init__()
-
-    def toggle_all(self):
-        self.cgroups = not self.cgroups
-        self.memory = not self.memory
-        self.evictor = not self.evictor
-        self.package = not self.package
+Path_t = str
 
 
-class StorageConfig(BaseConfig):
-    this_key = "storage"
-
-    def __init__(self):
-        self.root = "private"
-        self.scratch = ""
-        self.code = ""
-        super(StorageConfig, self).__init__()
-
-    def __setattr__(self, key, value):
-        if key == "root":
-            assert value in ["", "memory", "private"]
-        self.__dict__[key] = value
+class Limits(BaseConfig):
+    def __init__(self, procs=None, mem_mb=None, swappiness=None, installer_mem_mb=None):
+        self.procs = procs or 10
+        self.mem_mb = mem_mb or 50
+        self.swappiness = swappiness or 0
+        self.installer_mem_mb = installer_mem_mb or 500
 
 
-class SandboxConfig(BaseConfig):
-    this_key = "sandbox_config"
-
-    def __init__(self):
-        super(SandboxConfig, self).__init__()
-
-
-class Config(BaseConfig):
-    def __init__(self, worker_dir: str):
-        assert isinstance(worker_dir, str)
-        worker_dir = os.path.abspath(worker_dir)
-
-        self.worker_dir = worker_dir
-        self.registry = os.path.join(worker_dir, "registry")
-        self.Pkgs_dir = os.path.join(worker_dir, "lambda/packages")
-        self.SOCK_base_path = os.path.join(worker_dir, "lambda")
-
-        self.worker_port = "5000"
-        self.sandbox = "sock"  # TODO: Make it an option to select
-        self.server_mode = "lambda"  # TODO: Make it an option to select
-        self.registry_cache_ms = 5000
-        self.pip_mirror = ""
-        self.mem_pool_mb = 2048
-        self.import_cache_tree = ""
-
-        self.sandbox_config = SandboxConfig()
-        self.docker_runtime = ""
-
-        self.limits = LimitsConfig()
-        self.features = FeaturesConfig()
-        self.trace = TraceConfig()
-        self.storage = StorageConfig()
-
-        super(Config, self).__init__()
-
-    def __setattr__(self, key, value):
-        if key == "sandbox":
-            assert value in ["sock", "docker"]
-        elif key == "server_mode":
-            assert value in ["lambda", "sock"]
-        self.__dict__[key] = value
-
-    def rebase_worker_dir(self, worker_dir):
-        # Change all path-related variables
-        self.worker_dir = worker_dir
-        self.registry = os.path.join(worker_dir, "registry")
-        self.Pkgs_dir = os.path.join(worker_dir, "lambda/packages")
-        self.SOCK_base_path = os.path.join(worker_dir, "lambda")
+class Features(BaseConfig):
+    def __init__(self, reuse_cgroups=None, import_cache=None, downsize_paused_mem=None):
+        self.reuse_cgroups = reuse_cgroups or False
+        self.import_cache = import_cache or True
+        self.downsize_paused_mem = downsize_paused_mem or True
 
 
-class LambdaConfig(Config):
-    def __init__(self, worker_dir: str):
-        super(LambdaConfig, self).__init__(worker_dir)
-        # self.sandbox = "sock"
-        self.server_mode = "lambda"
+class Trace(BaseConfig):
+    def __init__(self, cgroups=None, memory=None, evictor=None, package=None):
+        self.cgroups = cgroups or False
+        self.memory = memory or False
+        self.evictor = evictor or False
+        self.package = package or False
 
 
-class SOCKConfig(Config):
-    def __init__(self, worker_dir: str):
-        super(SOCKConfig, self).__init__(worker_dir)
-        # self.sandbox = "sock"
-        self.server_mode = "sock"
+class Storage(BaseConfig):
+    def __init__(self, root=None, scratch=None, code=None):
+        self.root = root or "private"
+        self.scratch = scratch or ""
+        self.code = code or ""
+
+
+class ServerMode(Options):
+    sock = "sock"
+    lambda_ = "lambda"
+
+
+class _Config(BaseConfig):
+    def __init__(self, worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
+                 server_mode: str = None,
+                 registry_cache_ms: int = None,
+                 pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
+                 sandbox_config: dict = None, docker_runtime: str = None,
+                 limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
+        """The config json data. The fields defined here will be directly written into a json file."""
+
+        self.worker_dir: Path_t = worker_dir or abspath(os.getcwd())
+        self.registry: Path_t = abspath(join(self.worker_dir, "registry"))
+        self.Pkgs_dir: Path_t = abspath(join(self.worker_dir, "lambda/packages"))
+        self.SOCK_base_path: Path_t = abspath(join(self.worker_dir, "lambda"))
+
+        self.worker_port = worker_port or "5000"
+        self.sandbox = sandbox or SandBox.lambda_
+        self.server_mode = server_mode or ServerMode.sock
+
+        self.registry_cache_ms = registry_cache_ms or 5000
+
+        self.pip_mirror = pip_mirror or ""
+        self.mem_pool_mb: int = mem_pool_mb or 2048
+        self.import_cache_tree: str = import_cache_tree or ""
+
+        self.sandbox_config: dict = sandbox_config or {}
+        self.docker_runtime: str = docker_runtime or ""
+
+        self.limits = limits or Limits()
+        self.features = features or Features()
+        self.trace = trace or Trace()
+        self.storage = storage or Storage()
+
+
+_config_data = _Config().__dict__
+
+
+class Config(_Config):
+    def __init__(self,
+                 # Config native parameter
+                 use_tmpfs=None,
+                 # _Config parameters
+                 worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
+                 server_mode: str = None,
+                 registry_cache_ms: int = None,
+                 pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
+                 sandbox_config: dict = None, docker_runtime: str = None,
+                 limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
+        """Initialize the configs to run a worker."""
+
+        super(Config, self).__init__(
+            worker_dir=worker_dir, worker_port=worker_port,
+            sandbox=sandbox, server_mode=server_mode,
+            registry_cache_ms=registry_cache_ms,
+            pip_mirror=pip_mirror,
+            mem_pool_mb=mem_pool_mb, import_cache_tree=import_cache_tree,
+            sandbox_config=sandbox_config, docker_runtime=docker_runtime,
+            limits=limits, features=features, trace=trace, storage=storage)
+
+        self.use_tmpfs = True
+
+
+    def to_dict(self):
+        disallow_keys = set(self.__dict__.keys()) - set(_config_data.keys())
+        return {
+            k: v for k, v in super(Config, self).to_dict()
+            if k not in disallow_keys
+        }
