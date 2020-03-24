@@ -1,4 +1,4 @@
-from pyol.config import Config
+from pyol.config import *
 
 
 def test_config():
@@ -10,6 +10,12 @@ def test_config():
 def test_push_pop():
     c = Config()
     c.push(worker_port="49000")
+    print(c)
+    c.push(worker_port="49001", server_mode=ServerMode.lambda_)
+    print(c)
+    c.pop()
+    print(c)
+    c.pop()
     print(c)
     c.pop()
     print(c)
