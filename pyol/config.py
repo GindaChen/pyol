@@ -1,3 +1,4 @@
+import json
 import os
 from os.path import abspath, join
 
@@ -13,10 +14,18 @@ class BaseConfig:
     """Config that can load/dump a dict."""
 
     def __repr__(self):
-        return str(self.to_dict())
+        return self.to_dict()
 
     def __str__(self):
-            
+        return json.dumps(self.to_dict(), indent=2)
+
+    def brief(self) -> dict:
+        """Present brief info about the config."""
+        return self.to_dict()
+
+    def detail(self) -> dict:
+        """Present detailed info about the config."""
+        return self.to_dict()
 
     def to_dict(self):
         result = {}
@@ -33,7 +42,17 @@ class BaseConfig:
                 self.__dict__[k].from_dict(v)
             else:
                 self.__dict__[k] = v
+        logger.debug(f'from_dict(): {self.detail()}')
         return self
+
+    def dumps(self):
+        """to JSON string."""
+        return json.dumps(self.to_dict(), indent=2)
+
+    def loads(self, json_str: str):
+        """from json string. See also from_dict()"""
+        dct = json.loads(json_str)
+        return self.from_dict(dct)
 
 
 class SandBox(Options):
@@ -141,12 +160,26 @@ class Config(_Config):
         self.use_tmpfs = use_tmpfs
         self._stack = []
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         disallow_keys = set(self.__dict__.keys()) - set(_config_data.keys())
         return {
             k: v for k, v in super(Config, self).to_dict().items()
             if k not in disallow_keys
         }
+
+    def brief(self) -> dict:
+        """Only show the diff-ed configurations. The base config will not be shown."""
+        result = {}
+        for c in self._stack:
+            for k, (o, n) in c.items():
+                result[k] = n
+        return result
+
+    __repr__ = brief
+
+    def __str__(self):
+        """Only show changed configs"""
+        return json.dumps(self.brief())
 
     def push(self,
              worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
@@ -185,11 +218,12 @@ class Config(_Config):
         logger.debug(f'Push configs:')
         for k, (o, n) in actual_diffed.items():
             logger.debug(f'  {k}: {o} -> {n}')
+        logger.debug(f'Full config: {self.detail()}')
         return self
 
     def pop(self):
         if not self._stack:
-            logger.debug('Stack is empty. Use default config instead.')
+            logger.error('Stack is empty. Use default config instead.')
             return self
 
         top = self._stack.pop()
@@ -199,7 +233,5 @@ class Config(_Config):
         logger.debug(f'Pop configs:')
         for k, (o, n) in top.items():
             logger.debug(f'  {k}: {n} -> {o}')
+        logger.debug(f'Full config: {self.detail()}')
         return self
-
-
-logger.setup_logging(".")
