@@ -1,6 +1,8 @@
 import os
 from os.path import abspath, join
 
+from pyol.utils import logger
+
 
 class Options():
     """Provide options to a variable."""
@@ -10,10 +12,11 @@ class Options():
 class BaseConfig:
     """Config that can load/dump a dict."""
 
-    def __str__(self):
+    def __repr__(self):
         return str(self.to_dict())
 
-    __repr__ = __str__
+    def __str__(self):
+            
 
     def to_dict(self):
         result = {}
@@ -113,16 +116,17 @@ _config_data = _Config().__dict__
 
 
 class Config(_Config):
-    def __init__(self,
-                 # Config native parameter
-                 use_tmpfs=None,
-                 # _Config parameters
-                 worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
-                 server_mode: str = None,
-                 registry_cache_ms: int = None,
-                 pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
-                 sandbox_config: dict = None, docker_runtime: str = None,
-                 limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
+    def __init__(
+            self,
+            # Config native parameter
+            use_tmpfs=None,
+            # _Config parameters
+            worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
+            server_mode: str = None,
+            registry_cache_ms: int = None,
+            pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
+            sandbox_config: dict = None, docker_runtime: str = None,
+            limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
         """Initialize the configs to run a worker."""
 
         super(Config, self).__init__(
@@ -134,12 +138,68 @@ class Config(_Config):
             sandbox_config=sandbox_config, docker_runtime=docker_runtime,
             limits=limits, features=features, trace=trace, storage=storage)
 
-        self.use_tmpfs = True
-
+        self.use_tmpfs = use_tmpfs
+        self._stack = []
 
     def to_dict(self):
         disallow_keys = set(self.__dict__.keys()) - set(_config_data.keys())
         return {
-            k: v for k, v in super(Config, self).to_dict()
+            k: v for k, v in super(Config, self).to_dict().items()
             if k not in disallow_keys
         }
+
+    def push(self,
+             worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
+             server_mode: str = None,
+             registry_cache_ms: int = None,
+             pip_mirror: str = None, mem_pool_mb: int = None, import_cache_tree: str = None,
+             sandbox_config: dict = None, docker_runtime: str = None,
+             limits: Limits = None, features: Features = None, trace: Trace = None, storage: Storage = None):
+        """
+        Push config to overwrite some of the existing arguments.
+        Argument with None value will not be written as part in the diff.
+        :param worker_dir:
+        :param worker_port:
+        :param sandbox:
+        :param server_mode:
+        :param registry_cache_ms:
+        :param pip_mirror:
+        :param mem_pool_mb:
+        :param import_cache_tree:
+        :param sandbox_config:
+        :param docker_runtime:
+        :param limits:
+        :param features:
+        :param trace:
+        :param storage:
+        :return:
+        """
+        diff = {k: v for k, v in locals().items() if k != 'self' and v is not None}
+        actual_diffed = dict()
+        for key, new in diff.items():
+            old = self.__dict__[key]
+            if old != new:
+                actual_diffed[key] = (old, new)
+                self.__dict__[key] = new
+        self._stack.append(actual_diffed)
+        logger.debug(f'Push configs:')
+        for k, (o, n) in actual_diffed.items():
+            logger.debug(f'  {k}: {o} -> {n}')
+        return self
+
+    def pop(self):
+        if not self._stack:
+            logger.debug('Stack is empty. Use default config instead.')
+            return self
+
+        top = self._stack.pop()
+        for key, (old, new) in top.items():
+            self.__dict__[key] = old
+
+        logger.debug(f'Pop configs:')
+        for k, (o, n) in top.items():
+            logger.debug(f'  {k}: {n} -> {o}')
+        return self
+
+
+logger.setup_logging(".")
