@@ -2,17 +2,19 @@ import os
 from os.path import abspath
 
 from pyol.config import Config, Path_t, Limits, Features, Trace, Storage
+from pyol import ol, setup_ol, OL, default_ol
+
+ol = default_ol
 
 
 class Worker(Config):
 
     def __init__(
             self,
-            # Required arguments: worker_dir - to decide the directory to run.
-            worker_dir: Path_t,
             # Config native parameter
             use_tmpfs: bool = None,
             # _Config parameters
+            worker_dir: Path_t = None,
             worker_port: str = None, sandbox: str = None,
             server_mode: str = None,
             registry_cache_ms: int = None,
@@ -22,7 +24,7 @@ class Worker(Config):
         """The work directory will be a separated entity that eventually injected into config."""
 
         # TODO: Inject the worker_dir to the setting of config.
-        worker_dir = abspath(worker_dir) or abspath(os.getcwd())
+        worker_dir = abspath(worker_dir) or abspath(join(os.getcwd(), "default-ol"))
         self.worker_dir = worker_dir
 
         super(Worker, self).__init__(
@@ -44,3 +46,16 @@ class Worker(Config):
 
     def remount(self):
         pass
+
+    def create():
+        pass
+
+    def destroy():
+        pass
+
+    def start():
+        pass
+
+    def stop():
+        pass
+    
