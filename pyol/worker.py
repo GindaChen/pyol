@@ -2,7 +2,7 @@ import os
 from os.path import abspath
 
 from pyol.config import Config, Path_t, Limits, Features, Trace, Storage
-from pyol import ol, setup_ol, OL, default_ol
+from pyol.ol import setup_ol, OL, default_ol
 
 ol = default_ol
 
