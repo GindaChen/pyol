@@ -133,5 +133,6 @@ dmypy.json
 .vscode
 .idea
 log*
+.DS_Store
 pyol/bench/default-ol
 pyol/bench/bench
