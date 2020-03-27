@@ -1,0 +1,126 @@
+{
+  "calls": [
+    {
+      "name": "fn1"
+    },
+    {
+      "name": "fn2"
+    },
+    {
+      "name": "fn3"
+    },
+    {
+      "name": "fn4"
+    },
+    {
+      "name": "fn5"
+    },
+    {
+      "name": "fn6"
+    },
+    {
+      "name": "fn7"
+    },
+    {
+      "name": "fn8"
+    },
+    {
+      "name": "fn9"
+    },
+    {
+      "name": "fn10"
+    }
+  ],
+  "funcs": [
+    {
+      "code": [
+        "# ol-install: simplejson, itsdangerous\n",
+        "import simplejson, itsdangerous\n",
+        "def f(event):\n",
+        "    return 'fn1'\n"
+      ],
+      "name": "fn1"
+    },
+    {
+      "code": [
+        "# ol-install: chardet, six\n",
+        "import chardet, six\n",
+        "def f(event):\n",
+        "    return 'fn2'\n"
+      ],
+      "name": "fn2"
+    },
+    {
+      "code": [
+        "# ol-install: django, kiwisolver\n",
+        "import django, kiwisolver\n",
+        "def f(event):\n",
+        "    return 'fn3'\n"
+      ],
+      "name": "fn3"
+    },
+    {
+      "code": [
+        "# ol-install: pyqt5, werkzeug\n",
+        "import werkzeug\n",
+        "def f(event):\n",
+        "    return 'fn4'\n"
+      ],
+      "name": "fn4"
+    },
+    {
+      "code": [
+        "# ol-install: simplejson, pandas\n",
+        "import simplejson, pandas\n",
+        "def f(event):\n",
+        "    return 'fn5'\n"
+      ],
+      "name": "fn5"
+    },
+    {
+      "code": [
+        "# ol-install: chardet, simplejson\n",
+        "import chardet, simplejson\n",
+        "def f(event):\n",
+        "    return 'fn6'\n"
+      ],
+      "name": "fn6"
+    },
+    {
+      "code": [
+        "# ol-install: sqlparse, pyqt5-sip\n",
+        "import sqlparse\n",
+        "def f(event):\n",
+        "    return 'fn7'\n"
+      ],
+      "name": "fn7"
+    },
+    {
+      "code": [
+        "# ol-install: cycler, requests\n",
+        "import cycler, requests\n",
+        "def f(event):\n",
+        "    return 'fn8'\n"
+      ],
+      "name": "fn8"
+    },
+    {
+      "code": [
+        "# ol-install: pyparsing, numpy\n",
+        "import pyparsing, numpy\n",
+        "def f(event):\n",
+        "    return 'fn9'\n"
+      ],
+      "name": "fn9"
+    },
+    {
+      "code": [
+        "# ol-install: pytz, scipy\n",
+        "import pytz, scipy\n",
+        "def f(event):\n",
+        "    return 'fn10'\n"
+      ],
+      "name": "fn10"
+    }
+  ]
+}
