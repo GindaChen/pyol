@@ -199,6 +199,7 @@ class Worker(Config):
         timestamp = time.strftime('%y%m%d_%H%M%S')
         workload_file = f'{timestamp}_workload.json'
         result_file = f'{timestamp}_bench_result.json'
+        workload.dump(workload_file)
         cmd = ['go', 'run', 'bench.go', 'run', f'-w={workload_file}', '-v', f'-o {result_file}']
         logger.debug(f"Execute: {self._join(cmd)}")
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -211,7 +212,6 @@ class Worker(Config):
                 result = json.load(f)
                 return result
         raise Exception("Error occur while benchmarking")
-        pass
 
     def kill(self):  # async=False, retry=100, sleep_time=1):
         """Send kill message to the currently running worker."""
@@ -263,33 +263,26 @@ class Worker(Config):
     #  Worker interface
     #     Use these method to create, destroy and run worker.
     # =====================================================================
-    def mount(self):
-        pass
-
-    def umount(self):
-        pass
-
-    def remount(self):
-        pass
-
-    def register(self):
-        """Register a script into worker registry"""
-        pass
-
-    def register_batch(self, workload: Workload):
-        pass
-
-    def run_workload(self, workload: Workload):
-        pass
-
-    def create(self):
-        pass
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def destroy(self):
-        pass
+    # def mount(self):
+    #     pass
+    #
+    # def umount(self):
+    #     pass
+    #
+    # def remount(self):
+    #     pass
+    #
+    # def register_batch(self, workload: Workload):
+    #     pass
+    #
+    # def create(self):
+    #     pass
+    #
+    # def start(self):
+    #     pass
+    #
+    # def stop(self):
+    #     pass
+    #
+    # def destroy(self):
+    #     pass
