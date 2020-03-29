@@ -1,5 +1,7 @@
+import json
 import os
 import subprocess
+import time
 from enum import Enum
 from os.path import abspath, join
 
@@ -192,8 +194,23 @@ class Worker(Config):
         raise Exception(f"{endpoint} error with code {res.status_code}")
 
     # TODO: Batch run commands for benchmark. Use go script to do this
-    def run_batch(self, ):
+    def run_batch(self, workload: Workload) -> dict:
         """Launch a go script (bench.go) and batch run the experiments."""
+        timestamp = time.strftime('%y%m%d_%H%M%S')
+        workload_file = f'{timestamp}_workload.json'
+        result_file = f'{timestamp}_bench_result.json'
+        cmd = ['go', 'run', 'bench.go', 'run', f'-w={workload_file}', '-v', f'-o {result_file}']
+        logger.debug(f"Execute: {self._join(cmd)}")
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        logger.debug(stdout)
+        logger.debug(stderr)
+        proc.wait()
+        if not stderr:
+            with open(result_file, 'r') as f:
+                result = json.load(f)
+                return result
+        raise Exception("Error occur while benchmarking")
         pass
 
     def kill(self):  # async=False, retry=100, sleep_time=1):
