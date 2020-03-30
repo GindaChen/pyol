@@ -26,13 +26,12 @@ class Worker(Config):
     PID = 'pid'
 
     def __init__(
-            self,
+            self, worker_dir: Path_t = None,
             executable_path=None,
             # Config native parameter
             use_tmpfs: bool = None,
 
             # _Config parameters
-            worker_dir: Path_t = None,
             worker_port: str = None, sandbox: str = None,
             server_mode: str = None,
             registry_cache_ms: int = None,
@@ -89,11 +88,14 @@ class Worker(Config):
         logger.debug(f"Execute: {self._join(cmd)}")
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = proc.communicate()
-        logger.debug(stdout)
+        logger.debug(stdout.decode('utf-8'))
         if stderr:
-            logger.error(stderr)
+            logger.error(stderr.decode('utf-8'))
         proc.wait()
         return proc, stdout, stderr
+
+    def _join(self, cmd):
+        return ' '.join(cmd)
 
     @property
     def base_url(self):
@@ -110,10 +112,6 @@ class Worker(Config):
     def port(self):
         return self.worker_port
 
-    def _join(self, cmd):
-        return ' '.join(cmd)
-
-    # OpenLambda Commands
     @property
     def pid(self):
         # url = os.path.join(self.base_url, self.PID)
@@ -138,11 +136,6 @@ class Worker(Config):
         with open(pid_path, 'r') as f:
             pid = int(f.read())
             return pid
-
-    # =====================================================================
-    #  OpenLambda interface
-    #     Use these method to statelessly communicate with openlambda.
-    # =====================================================================
 
     def new(self, noramdisk=False):
         if os.path.exists(self.worker_dir):
