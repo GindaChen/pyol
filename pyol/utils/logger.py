@@ -44,7 +44,7 @@ import time
 from functools import wraps
 
 import coloredlogs
-import tzlocal
+# import tzlocal
 
 disabled = False
 
@@ -57,8 +57,9 @@ def set_logger(log_fn):
 class Formatter(coloredlogs.ColoredFormatter):
     def converter(self, timestamp):
         dt = datetime.datetime.fromtimestamp(timestamp)
-        tzinfo = tzlocal.get_localzone()
-        return tzinfo.localize(dt)
+        # tzinfo = tzlocal.get_localzone()
+        # return tzinfo.localize(dt)
+        return dt
 
     def formatTime(self, record, datefmt=None):
         ct = self.converter(record.created)

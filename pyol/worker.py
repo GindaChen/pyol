@@ -23,9 +23,11 @@ class Worker(Config):
     STATUS = 'status'
     DEBUG = 'debug'
     RUN = 'run'
+    PID = 'pid'
 
     def __init__(
-            self, executable_path=None,
+            self,
+            executable_path=None,
             # Config native parameter
             use_tmpfs: bool = None,
 
@@ -44,7 +46,8 @@ class Worker(Config):
         """The work directory will be a separated entity that eventually injected into config."""
 
         # TODO: Inject the worker_dir to the setting of config.
-        worker_dir = abspath(worker_dir) or abspath(join(os.getcwd(), "default-ol"))
+        worker_dir = worker_dir or join(os.getcwd(), "default-ol")
+        worker_dir = abspath(worker_dir)
         self.worker_dir = worker_dir
         logger.info(f'Use worker_dir={worker_dir}')
 
@@ -67,12 +70,30 @@ class Worker(Config):
         # Worker running info
         self._pid = None
 
+    def __str__(self):
+        return f'Worker({self.state},dir={self.worker_dir})'
+
+    def __repr__(self):
+        descripts = [self.state, f'dir={self.worker_dir}']
+        description = ','.join(descripts)
+        return f'Worker({description})'
+
     def _find_executable(self):
         """Try `which ol`. If fails, prompt the user to enter the path of open lambda."""
         if subprocess.call(["which", "ol"]) == 0:
             return "ol"
         logger.error("Please specify the path to openlambda executable (usually `ol`) in $PATH.")
         raise Exception("Please specify the path to openlambda executable (usually `ol`) in $PATH.")
+
+    def _exec(self, cmd):
+        logger.debug(f"Execute: {self._join(cmd)}")
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        logger.debug(stdout)
+        if stderr:
+            logger.error(stderr)
+        proc.wait()
+        return proc, stdout, stderr
 
     @property
     def base_url(self):
@@ -95,12 +116,24 @@ class Worker(Config):
     # OpenLambda Commands
     @property
     def pid(self):
+        # url = os.path.join(self.base_url, self.PID)
+        # logger.info(f'Send status: curl -X POST {url}')
+        # res = requests.post(url)
+        # if res.status_code != 200:
+        #     logger.warning(f'Worker does not exist at the end point.')
+        #     return None
+        # msg = res.text.strip()
+        # logger.info(f'Recv status: {msg}')
+        # # res.reason == 'OK'
+        # return int(msg)
+
         pid_path = os.path.join(self.worker_dir, 'worker', 'worker.pid')
         if not os.path.exists(pid_path):
             if self._pid:
                 logger.error(f'Expect pid={self._pid}, but worker.pid not found. '
                              f'Worker could be forcefully killed.')
-                raise Exception(f'Expect pid={self._pid}, but worker.pid not found.')
+                return None
+                # raise Exception(f'Expect pid={self._pid}, but worker.pid not found.')
             return None
         with open(pid_path, 'r') as f:
             pid = int(f.read())
@@ -111,50 +144,42 @@ class Worker(Config):
     #     Use these method to statelessly communicate with openlambda.
     # =====================================================================
 
-    def new(self):
+    def new(self, noramdisk=False):
         if os.path.exists(self.worker_dir):
             logger.warning(f'New: {self.worker_dir} exist.')
             return self
-
         cmd = [self.ol, 'new', f'--path={self.worker_dir}']
-        logger.debug(f"Execute: {self._join(cmd)}")
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = proc.communicate()
-        proc.wait()
-
+        if noramdisk:
+            cmd.append('--noramdisk')
+        proc, stdout, stderr = self._exec(cmd)
         if proc.returncode == 0:
             return self
-
-        logger.error(f'{cmd} failed.')
-        logger.error(stdout)
         raise Exception("ol new failed")
 
     def worker(self):
         """By default the worker is detached."""
         pid = self.pid
-        if pid:
-            return pid
-
+        if pid: return pid
         cmd = [self.ol, 'worker', '-d', f'--path={self.worker_dir}']
-        logger.debug(f"Execute: {self._join(cmd)}")
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = proc.communicate()
-        proc.wait()
-        if not stderr:
-            return self.pid
-
-        logger.error(f'Error while starting worker with cmd {self._join(cmd)}')
-        logger.error(stderr)
-        logger.debug(f'Full log:')
-        logger.debug(stdout)
-        logger.debug(stderr)
+        proc, stdout, stderr = self._exec(cmd)
+        if not stderr: return self.pid
         raise Exception("Encounter error while starting worker.")
 
+    @property
+    def state(self):
+        # TODO: Store the state in worker for sometime
+        return self.status().name
+
     def status(self):
+        #  1. Check the endpoint is valid
+        # TODO: 2. Check the worker.pid exist
         """Check the status of the worker."""
         url = os.path.join(self.base_url, self.STATUS)
         logger.info(f'Send status: curl -X POST {url}')
-        res = requests.post(url)
+        try:
+            res = requests.post(url)
+        except:
+            return Status.STOP
         if res.status_code != 200:
             logger.warning(f'Worker does not exist at the end point.')
             return Status.STOP
@@ -170,7 +195,7 @@ class Worker(Config):
         res = requests.post(url)
         if res.status_code != 200:
             logger.warning(f'Worker does not exist at the end point.')
-            return None
+            return ''
         msg = res.text.strip()
         logger.info(f'Recv debug: {msg}')
         return msg
@@ -252,37 +277,11 @@ class Worker(Config):
         #     i += 1
         # stdout, stderr = proc.communicate()
 
-    def cleanup(self, path: str = None):
-        """If kill is not successful, we need to manually clean up the skills.
-        1. Use `lsof` to check the ol executables.
-        2. Check
-        """
+    def cleanup(self):
+        cmd = [self.ol, 'clean', f'--path={self.worker_dir}']
+        logger.debug(f"Execute: {self._join(cmd)}")
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        logger.debug(stdout)
+        logger.debug(stderr)
         pass
-
-    # =====================================================================
-    #  Worker interface
-    #     Use these method to create, destroy and run worker.
-    # =====================================================================
-    # def mount(self):
-    #     pass
-    #
-    # def umount(self):
-    #     pass
-    #
-    # def remount(self):
-    #     pass
-    #
-    # def register_batch(self, workload: Workload):
-    #     pass
-    #
-    # def create(self):
-    #     pass
-    #
-    # def start(self):
-    #     pass
-    #
-    # def stop(self):
-    #     pass
-    #
-    # def destroy(self):
-    #     pass

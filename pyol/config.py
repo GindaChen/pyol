@@ -14,7 +14,7 @@ class BaseConfig:
     """Config that can load/dump a dict."""
 
     def __repr__(self):
-        return self.to_dict()
+        return json.dumps(self.to_dict(), indent=2)
 
     def __str__(self):
         return json.dumps(self.to_dict(), indent=2)
@@ -175,11 +175,11 @@ class Config(_Config):
                 result[k] = n
         return result
 
-    __repr__ = brief
-
     def __str__(self):
         """Only show changed configs"""
         return json.dumps(self.brief())
+
+    __repr__ = __str__
 
     def push(self,
              worker_dir: Path_t = None, worker_port: str = None, sandbox: str = None,
